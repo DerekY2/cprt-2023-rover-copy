@@ -30,49 +30,65 @@ class joystickDrive(Node):
         self.lastTimestamp = 0
 
         # Constants
+
+        # PID Mode
         self.declare_parameter("PID", 0)
         self.pidMode = (
             self.get_parameter("PID").get_parameter_value().integer_value
         )
+        # PID Max speed
         self.declare_parameter("PID_max_speed", 1.0)
         self.MAX_PID_SPEED = (
             self.get_parameter("PID_max_speed").get_parameter_value().double_value
         )
+        # PID max turn speed
         self.declare_parameter("PID_max_turn", 1.0)
         self.MAX_PID_TURN = (
             self.get_parameter("PID_max_turn").get_parameter_value().double_value
         )
+        # Max drive voltage
         self.declare_parameter("voltage_max_speed", 1.0)
         self.MAX_VOLTAGE_SPEED = (
             self.get_parameter("voltage_max_speed").get_parameter_value().double_value
         )
+        # Max turn voltage
         self.declare_parameter("voltage_max_turn", 1.0)
         self.MAX_VOLTAGE_TURN = (
             self.get_parameter("voltage_max_turn").get_parameter_value().double_value
         )
+
         self.active = True
 
+        # Create drive parameter publisher
         self.setTwistPub = self.create_publisher(
             Twist, "/drive/cmd_vel", 1)
+        
+        # E-stop publisher
         self.setEstop = self.create_publisher(
             Bool, "/drive/estop", 1)
+        
+        # Subscribe to joystick
         self.cmd_move_subscriber = self.create_subscription(
             Joy,"/joystick/drive", self.cmd_joy_callback, 10)
-        self.setEstop.publish(self.estop) #init as not estoped
+        
+        self.setEstop.publish(self.estop) #init as not e-stopped
 
         freq = 10
         self.rate = self.create_rate(freq)
         period = 1 / freq
         self.timer = self.create_timer(period, self.joystick_timeout_handler)
 
+    # handle joystick timrout (i.e. disconnect)
     def joystick_timeout_handler(self):
-        if(Node.get_clock(self).now().seconds_nanoseconds()[0] - self.lastTimestamp > 2):
+        # has it been 2 secs since lastTimestamp privded from joystick feedback?
+        if(Node.get_clock(self).now().seconds_nanoseconds()[0] - self.lastTimestamp > 2): 
             self.estopTimeout.data = True
             self.setEstop.publish(self.estopTimeout)
         elif(Node.get_clock(self).now().seconds_nanoseconds()[0] - self.lastTimestamp <= 2 and (self.estopTimeout.data and not self.estop)):
             self.estopTimeout.data = False
             self.setEstop.publish(self.estopTimeout)
 
+    # run this function everytime Joy data is received 
     def cmd_joy_callback(self, msg: Joy):
         if (msg.buttons[7] == 1 and self.last_msg.buttons[7] == 0):
             self.active = not self.active
