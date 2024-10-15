@@ -29,6 +29,7 @@ class joystickDrive(Node):
         self.estopTimeout.data = False
         self.lastTimestamp = 0
 
+        # Constants
         self.declare_parameter("PID", 0)
         self.pidMode = (
             self.get_parameter("PID").get_parameter_value().integer_value
